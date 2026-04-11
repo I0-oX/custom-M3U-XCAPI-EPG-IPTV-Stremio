@@ -384,15 +384,18 @@ Create an issue: https://github.com/Inside4ndroid/IPTV-Stremio-Addon/issues
 
 ---
 
-## ☕ Support Development
+# ☕ Sponsorship / Support Development
 
-(Previous embedded image returned AccessDenied from BuyMeACoffee CDN on some networks / GitHub proxies.)
+Your sponsorship is vital in helping me achieve my goals. With your support, I can:
 
-Use one of these reliable **text/badge** links instead:
+- Dedicate more time to developing and improving my projects.
+- Cover costs for essential tools, services and premium hosting to run public projects.
+- Provide detailed documentation and support for users.
+- Every contribution, no matter the size, makes a significant impact.
 
-[![Buy me a coffee (Badge)](https://www.buymeacoffee.com/assets/img/custom_images/purple_img.png)](https://buymeacoffee.com/K3QSoR2)
-  
-Or link: https://buymeacoffee.com/K3QSoR2
+[Sonate / Sponsor Me!](https://github.com/sponsors/Inside4ndroid)
+
+Thank you for considering supporting my work!
 
 ---
 
