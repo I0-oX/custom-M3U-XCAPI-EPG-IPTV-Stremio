@@ -4,8 +4,8 @@
   "description": "Stremio addon for M3U playlists and EPG data with Xtream API support (encrypted configs, LRU/Redis cache)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node patch-stremio-sdk.js && node server.js",
+    "dev": "node patch-stremio-sdk.js && nodemon server.js",
     "test": "node test.js"
   },
   "dependencies": {
