@@ -57,7 +57,7 @@
         <fieldset>
             <legend>EPG Options</legend>
             <div class="form-group checkbox-line">
-                <input type="checkbox" id="enableEpg" name="enableEpg" checked>
+                <input type="checkbox" id="enableEpg" name="enableEpg">
                 <label class="checkbox-label" for="enableEpg" class="inline">Enable EPG</label>
             </div>
 
@@ -119,10 +119,10 @@
     <section class="info-panel">
         <h3>Hints</h3>
         <ul class="feature-list">
-            <li>JSON mode validates VOD without downloading the full live-channel catalog.</li>
-            <li>M3U mode parses the entire exported playlist client-side.</li>
-            <li>You can override the panel EPG with a custom XMLTV feed.</li>
-            <li>Series (shows) are supported in both modes (heuristic for M3U).</li>
+            <li>JSON mode skips large catalog downloads during setup.</li>
+            <li>The addon loads films and series after installation.</li>
+            <li>EPG is disabled by default for VOD-only usage.</li>
+            <li>Series and episodes remain available through Xtream JSON.</li>
         </ul>
     </section>
 </main>
@@ -156,13 +156,25 @@
         if (input === "/api/prefetch" && init && typeof init.body === "string") {
             try {
                 const request = JSON.parse(init.body);
-                if (request && request.purpose === "live_streams") {
+                if (request && (request.purpose === "live_streams" || request.purpose === "vod_streams")) {
                     return new Response(JSON.stringify({
                         ok: true,
                         bytes: 2,
                         truncated: false,
-                        purpose: "live_streams",
+                        purpose: request.purpose,
                         content: "[]"
+                    }), {
+                        status: 200,
+                        headers: { "Content-Type": "application/json" }
+                    });
+                }
+                if (request && request.purpose === "epg") {
+                    return new Response(JSON.stringify({
+                        ok: true,
+                        bytes: 9,
+                        truncated: false,
+                        purpose: "epg",
+                        content: "<tv></tv>"
                     }), {
                         status: 200,
                         headers: { "Content-Type": "application/json" }
