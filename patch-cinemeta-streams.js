@@ -23,6 +23,7 @@ const helpers = `    normalizeMediaTitle(value) {
         return String(value || '')
             .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
             .toLowerCase()
+            .replace(/\\(\\s*[a-z]{2,3}\\s*\\)\\s*$/g, ' ')
             .replace(/\\[[^\\]]*(?:fr|french|multi|vostfr|vf|vo|en|english)[^\\]]*\\]/g, ' ')
             .replace(/\\([^)]*(?:fr|french|multi|vostfr|vf|vo|en|english)[^)]*\\)/g, ' ')
             .replace(/\\b(?:fr|french|multi|multilang|vostfr|vf|vo|en|english|truefrench)\\b/g, ' ')
@@ -186,4 +187,4 @@ if (!source.includes(oldHandler)) throw new Error('stream handler marker not fou
 source = source.replace(oldHandler, newHandler);
 
 fs.writeFileSync(addonPath, source);
-console.log('[PATCH] Strict Cinemeta matching and combined language detection applied');
+console.log('[PATCH] Strict Cinemeta matching with trailing country-code cleanup applied');
