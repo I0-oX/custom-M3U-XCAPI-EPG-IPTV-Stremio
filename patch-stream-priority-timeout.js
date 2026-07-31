@@ -12,11 +12,10 @@ const newSort = `.sort((a, b) => {
                 return (priority[this.getItemLanguage(a.item)] ?? 9) - (priority[this.getItemLanguage(b.item)] ?? 9);
             })
             .map(entry => entry.item);`;
-if (!source.includes(oldSort)) throw new Error('title match sort marker not found');
-source = source.replace(oldSort, newSort);
+if (source.includes(oldSort)) source = source.replace(oldSort, newSort);
 
-const oldSeriesMatches = `const matches = this.findTitleMatches(this.series, meta.name, year);`;
-const newSeriesMatches = `const matches = this.findTitleMatches(this.series, meta.name, year).slice(0, 6);`;
+const oldSeriesMatches = `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId);`;
+const newSeriesMatches = `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId).slice(0, 6);`;
 if (!source.includes(oldSeriesMatches)) throw new Error('series matches marker not found');
 source = source.replace(oldSeriesMatches, newSeriesMatches);
 
@@ -43,8 +42,6 @@ const newReturn = `            const priority = { FR: 0, MULTI: 1, EN: 2, OTHER:
         return [];`;
 if (!source.includes(oldReturn)) throw new Error('series return marker not found');
 source = source.replace(oldReturn, newReturn);
-
-source = source.replace('version: "2.5.0",', 'version: "2.6.0",');
 
 fs.writeFileSync(addonPath, source);
 console.log('[PATCH] French stream priority and bounded series lookups applied');
