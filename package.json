@@ -1,11 +1,11 @@
 {
   "name": "stremio-m3u-epg-addon",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "Stremio addon for Xtream movies and series with Cinemeta IMDb matching",
   "main": "server.js",
   "scripts": {
-    "start": "node patch-stremio-sdk.js && node patch-vod-manifest.js && node patch-language-filter.js && node patch-cinemeta-streams.js && node patch-stream-quality.js && node patch-default-xtream.js && node server.js",
-    "dev": "node patch-stremio-sdk.js && node patch-vod-manifest.js && node patch-language-filter.js && node patch-cinemeta-streams.js && node patch-stream-quality.js && node patch-default-xtream.js && nodemon server.js",
+    "start": "node patch-stremio-sdk.js && node patch-vod-manifest.js && node patch-language-filter.js && node patch-cinemeta-streams.js && node patch-stream-quality.js && node patch-stream-priority-timeout.js && node patch-default-xtream.js && node server.js",
+    "dev": "node patch-stremio-sdk.js && node patch-vod-manifest.js && node patch-language-filter.js && node patch-cinemeta-streams.js && node patch-stream-quality.js && node patch-stream-priority-timeout.js && node patch-default-xtream.js && nodemon server.js",
     "test": "node test.js"
   },
   "dependencies": {
