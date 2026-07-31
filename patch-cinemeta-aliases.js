@@ -43,28 +43,32 @@ const helpers = `    collectMetaTitles(meta) {
 
     findTitleMatchesAny(items, titles, year, imdbId) {
         const wantedId = this.normalizeExternalId(imdbId);
-        const exactIdMatches = (items || []).filter(item => {
-            const ids = [item.imdb_id, item.imdb, item.imdbId, item.attributes?.imdb_id];
-            return ids.some(value => this.normalizeExternalId(value) === wantedId);
-        });
-        if (exactIdMatches.length) {
-            return exactIdMatches.sort((a, b) => this.getLanguagePriority(a) - this.getLanguagePriority(b));
-        }
-
         const candidates = Array.isArray(titles) ? titles.filter(Boolean) : [];
         const scored = new Map();
+
         for (const item of items || []) {
-            let best = -1;
+            const ids = [item.imdb_id, item.imdb, item.imdbId, item.attributes?.imdb_id];
+            const exactId = Boolean(wantedId) && ids.some(value => this.normalizeExternalId(value) === wantedId);
+
+            let bestTitleScore = -1;
             for (const title of candidates) {
-                best = Math.max(best, this.scoreTitleMatch(item, title, year));
+                bestTitleScore = Math.max(bestTitleScore, this.scoreTitleMatch(item, title, year));
             }
-            if (best >= 100) scored.set(item, best);
+
+            if (exactId || bestTitleScore >= 100) {
+                scored.set(item, {
+                    exactId,
+                    titleScore: bestTitleScore
+                });
+            }
         }
+
         return [...scored.entries()]
             .sort((a, b) => {
                 const languageDifference = this.getLanguagePriority(a[0]) - this.getLanguagePriority(b[0]);
                 if (languageDifference !== 0) return languageDifference;
-                return b[1] - a[1];
+                if (a[1].exactId !== b[1].exactId) return a[1].exactId ? -1 : 1;
+                return b[1].titleScore - a[1].titleScore;
             })
             .map(([item]) => item);
     }
@@ -87,4 +91,4 @@ source = source.replace('version: "2.5.0",', 'version: "2.7.0",');
 source = source.replace('version: "2.4.0",', 'version: "2.7.0",');
 
 fs.writeFileSync(addonPath, source);
-console.log('[PATCH] Cinemeta alternate titles, exact IMDb matching and French priority applied');
+console.log('[PATCH] Combined IMDb and localized title matching with French priority applied');
