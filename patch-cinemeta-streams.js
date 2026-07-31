@@ -13,7 +13,7 @@ source = source.replace(
   'const ADDON_ID = "org.stremio.m3u-epg-addon";',
   'const ADDON_ID = "org.stremio.m3u-epg-addon.cinemeta";'
 );
-source = source.replace('version: "2.0.0",', 'version: "2.3.0",');
+source = source.replace('version: "2.0.0",', 'version: "2.4.0",');
 source = source.replace('const ADDON_NAME = "M3U/EPG TV Addon";', 'const ADDON_NAME = "Xtream Cinemeta FR MULTI EN";');
 
 const marker = '    getStream(id) {';
@@ -23,10 +23,20 @@ const helpers = `    normalizeMediaTitle(value) {
         return String(value || '')
             .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
             .toLowerCase()
-            .replace(/\\b(?:fr|french|multi|multilang|vostfr|vf|vo|en|english)\\b/g, ' ')
+            .replace(/\\[[^\\]]*(?:fr|french|multi|vostfr|vf|vo|en|english)[^\\]]*\\]/g, ' ')
+            .replace(/\\([^)]*(?:fr|french|multi|vostfr|vf|vo|en|english)[^)]*\\)/g, ' ')
+            .replace(/\\b(?:fr|french|multi|multilang|vostfr|vf|vo|en|english|truefrench)\\b/g, ' ')
             .replace(/\\b(?:19|20)\\d{2}\\b/g, ' ')
             .replace(/[^a-z0-9]+/g, ' ')
             .trim();
+    }
+
+    titleTokens(value) {
+        const stopWords = new Set(['the', 'a', 'an', 'of', 'and', 'le', 'la', 'les', 'un', 'une', 'de', 'des', 'du', 'et']);
+        return this.normalizeMediaTitle(value)
+            .split(/\\s+/)
+            .filter(Boolean)
+            .filter(token => !stopWords.has(token));
     }
 
     extractMediaYear(value) {
@@ -35,10 +45,14 @@ const helpers = `    normalizeMediaTitle(value) {
     }
 
     getItemLanguage(item) {
-        const value = String(item.category || item.attributes?.['group-title'] || item.name || '').toUpperCase();
-        if (/\\bMULTI(?:LANG)?\\b/.test(value)) return 'MULTI';
-        if (/\\b(?:FR|FRENCH|FRANCE|VF|VOSTFR)\\b/.test(value)) return 'FR';
-        if (/\\b(?:EN|ENGLISH|VO)\\b/.test(value)) return 'EN';
+        const value = [
+            item.category,
+            item.attributes?.['group-title'],
+            item.name
+        ].filter(Boolean).join(' ').toUpperCase();
+        if (/\\b(?:MULTI|MULTILANG|MULTILINGUAL)\\b/.test(value)) return 'MULTI';
+        if (/\\b(?:TRUEFRENCH|FRENCH|FRANCE|VOSTFR|VF|FR)\\b/.test(value)) return 'FR';
+        if (/\\b(?:ENGLISH|ENG|EN)\\b/.test(value)) return 'EN';
         return 'OTHER';
     }
 
@@ -55,28 +69,43 @@ const helpers = `    normalizeMediaTitle(value) {
         }
     }
 
-    findTitleMatches(items, title, year) {
+    scoreTitleMatch(item, title, year) {
         const wanted = this.normalizeMediaTitle(title);
-        if (!wanted) return [];
-        return (items || []).map(item => {
-            const candidate = this.normalizeMediaTitle(item.name);
-            if (!candidate) return { item, score: -1 };
-            let score = 0;
-            if (candidate === wanted) score += 100;
-            else if (candidate.includes(wanted) || wanted.includes(candidate)) score += 70;
-            else {
-                const wantedWords = new Set(wanted.split(/\\s+/).filter(Boolean));
-                const candidateWords = new Set(candidate.split(/\\s+/).filter(Boolean));
-                const overlap = [...wantedWords].filter(word => candidateWords.has(word)).length;
-                score += wantedWords.size ? (overlap / wantedWords.size) * 60 : 0;
-            }
-            const candidateYear = item.year || this.extractMediaYear(item.name);
-            if (year && candidateYear) score += Math.abs(Number(year) - Number(candidateYear)) <= 1 ? 20 : -20;
-            return { item, score };
-        })
-        .filter(entry => entry.score >= 65)
-        .sort((a, b) => b.score - a.score)
-        .map(entry => entry.item);
+        const candidate = this.normalizeMediaTitle(item.name);
+        if (!wanted || !candidate) return -1;
+
+        const candidateYear = item.year || this.extractMediaYear(item.name);
+        if (year && candidateYear && Math.abs(Number(year) - Number(candidateYear)) > 1) return -1;
+
+        if (candidate === wanted) return 200;
+
+        const wantedTokens = this.titleTokens(title);
+        const candidateTokens = this.titleTokens(item.name);
+        if (!wantedTokens.length || !candidateTokens.length) return -1;
+
+        const wantedSet = new Set(wantedTokens);
+        const candidateSet = new Set(candidateTokens);
+        const intersection = [...wantedSet].filter(token => candidateSet.has(token)).length;
+        const union = new Set([...wantedSet, ...candidateSet]).size;
+        const wantedCoverage = intersection / wantedSet.size;
+        const candidateCoverage = intersection / candidateSet.size;
+        const jaccard = union ? intersection / union : 0;
+
+        // Require essentially the same title. This prevents partial collisions such as
+        // "Young Indiana Jones" matching an unrelated title sharing one short word.
+        if (wantedCoverage < 0.8 || candidateCoverage < 0.8 || jaccard < 0.7) return -1;
+
+        let score = 100 + (jaccard * 60);
+        if (year && candidateYear) score += 20;
+        return score;
+    }
+
+    findTitleMatches(items, title, year) {
+        return (items || [])
+            .map(item => ({ item, score: this.scoreTitleMatch(item, title, year) }))
+            .filter(entry => entry.score >= 100)
+            .sort((a, b) => b.score - a.score)
+            .map(entry => entry.item);
     }
 
     async getCinemetaStreams(type, id) {
@@ -157,4 +186,4 @@ if (!source.includes(oldHandler)) throw new Error('stream handler marker not fou
 source = source.replace(oldHandler, newHandler);
 
 fs.writeFileSync(addonPath, source);
-console.log('[PATCH] Cinemeta streams expose selectable FR, MULTI and EN sources');
+console.log('[PATCH] Strict Cinemeta matching and combined language detection applied');
