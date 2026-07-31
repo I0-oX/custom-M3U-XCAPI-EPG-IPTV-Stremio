@@ -14,18 +14,22 @@ const newSort = `.sort((a, b) => {
             .map(entry => entry.item);`;
 if (source.includes(oldSort)) source = source.replace(oldSort, newSort);
 
-const oldSeriesMatches = `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId);`;
-const newSeriesMatches = `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId).slice(0, 6);`;
-if (!source.includes(oldSeriesMatches)) throw new Error('series matches marker not found');
-source = source.replace(oldSeriesMatches, newSeriesMatches);
+const localizedSeriesMatches = `const matches = this.findTitleMatchesAny(this.series, seriesTitles, year, imdbId);`;
+const legacySeriesMatches = `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId);`;
+if (source.includes(localizedSeriesMatches)) {
+    source = source.replace(localizedSeriesMatches, `const matches = this.findTitleMatchesAny(this.series, seriesTitles, year, imdbId).slice(0, 6);`);
+} else if (source.includes(legacySeriesMatches)) {
+    source = source.replace(legacySeriesMatches, `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId).slice(0, 6);`);
+} else if (!source.includes(`.slice(0, 6);`)) {
+    throw new Error('series matches marker not found');
+}
 
 const oldInfo = `const info = await this.ensureSeriesInfo(seriesIdRaw);`;
 const newInfo = `const info = await Promise.race([
                     this.ensureSeriesInfo(seriesIdRaw),
                     new Promise(resolve => setTimeout(() => resolve({ videos: [] }), 6500))
                 ]);`;
-if (!source.includes(oldInfo)) throw new Error('series info marker not found');
-source = source.replace(oldInfo, newInfo);
+if (source.includes(oldInfo)) source = source.replace(oldInfo, newInfo);
 
 const oldReturn = `            return results;
         }
@@ -40,8 +44,7 @@ const newReturn = `            const priority = { FR: 0, MULTI: 1, EN: 2, OTHER:
         }
 
         return [];`;
-if (!source.includes(oldReturn)) throw new Error('series return marker not found');
-source = source.replace(oldReturn, newReturn);
+if (source.includes(oldReturn)) source = source.replace(oldReturn, newReturn);
 
 fs.writeFileSync(addonPath, source);
 console.log('[PATCH] French stream priority and bounded series lookups applied');
