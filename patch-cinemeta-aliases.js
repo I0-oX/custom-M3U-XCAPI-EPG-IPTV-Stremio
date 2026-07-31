@@ -36,13 +36,20 @@ const helpers = `    collectMetaTitles(meta) {
         return match ? match[0].toLowerCase() : raw.toLowerCase();
     }
 
+    getLanguagePriority(item) {
+        const priority = { FR: 0, MULTI: 1, EN: 2, OTHER: 3 };
+        return priority[this.getItemLanguage(item)] ?? 9;
+    }
+
     findTitleMatchesAny(items, titles, year, imdbId) {
         const wantedId = this.normalizeExternalId(imdbId);
         const exactIdMatches = (items || []).filter(item => {
             const ids = [item.imdb_id, item.imdb, item.imdbId, item.attributes?.imdb_id];
             return ids.some(value => this.normalizeExternalId(value) === wantedId);
         });
-        if (exactIdMatches.length) return exactIdMatches;
+        if (exactIdMatches.length) {
+            return exactIdMatches.sort((a, b) => this.getLanguagePriority(a) - this.getLanguagePriority(b));
+        }
 
         const candidates = Array.isArray(titles) ? titles.filter(Boolean) : [];
         const scored = new Map();
@@ -54,7 +61,11 @@ const helpers = `    collectMetaTitles(meta) {
             if (best >= 100) scored.set(item, best);
         }
         return [...scored.entries()]
-            .sort((a, b) => b[1] - a[1])
+            .sort((a, b) => {
+                const languageDifference = this.getLanguagePriority(a[0]) - this.getLanguagePriority(b[0]);
+                if (languageDifference !== 0) return languageDifference;
+                return b[1] - a[1];
+            })
             .map(([item]) => item);
     }
 
@@ -76,4 +87,4 @@ source = source.replace('version: "2.5.0",', 'version: "2.7.0",');
 source = source.replace('version: "2.4.0",', 'version: "2.7.0",');
 
 fs.writeFileSync(addonPath, source);
-console.log('[PATCH] Cinemeta alternate titles and exact IMDb matching applied');
+console.log('[PATCH] Cinemeta alternate titles, exact IMDb matching and French priority applied');
