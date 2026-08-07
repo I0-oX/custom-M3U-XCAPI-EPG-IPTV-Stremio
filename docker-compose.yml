@@ -1,22 +1,21 @@
 version: '3.8'
 services:
-  stremio_addon:
-    # Use pre-built image from GitHub Container Registry:
-    # image: ghcr.io/i0-ox/custom-m3u-xcapi-egp-iptv-stremio:latest
-    build: .
-    container_name: stremio_addon
-    ports:
-      - "7000:7000"
+  m3u-xcapi-iptv:
+    image: ghcr.io/i0-ox/custom-m3u-xcapi-egp-iptv-stremio:latest
+    container_name: m3u-xcapi-iptv
+    restart: unless-stopped
+    expose:
+      - 7000
     env_file:
       - .env
-    restart: unless-stopped
-    # depends_on:
-    #   - redis
-
-  # Optional Redis service
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: redis
-  #   ports:
-  #     - "6379:6379"
-  #   restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.m3u-xcapi-iptv.rule=Host(`${M3U_XCAPI_IPTV_HOSTNAME?}`)"
+      - "traefik.http.routers.m3u-xcapi-iptv.entrypoints=websecure"
+      - "traefik.http.routers.m3u-xcapi-iptv.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.m3u-xcapi-iptv.middlewares=authelia@docker"
+      - "traefik.http.services.m3u-xcapi-iptv.loadbalancer.server.port=7000"
+    profiles:
+      - m3u-xcapi-iptv
+      - m3u-xcapi-epg-iptv-stremio
+      - all
