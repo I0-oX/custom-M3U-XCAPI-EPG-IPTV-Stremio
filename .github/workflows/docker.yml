@@ -51,21 +51,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Link package to repo & make public
-        if: github.event_name != 'pull_request'
-        run: |
-          set -euo pipefail
-          OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1 | tr '[:upper:]' '[:lower:]')
-          PACKAGE_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2 | tr '[:upper:]' '[:lower:]')
-          REPO="${{ github.repository }}"
-          echo "Linking package ${PACKAGE_NAME} to repo ${REPO}..."
-          # Link package to repo so it inherits repo visibility (public)
-          gh api -X PUT "/repos/${REPO}/packages/container/${PACKAGE_NAME}" \
-            -H "Accept: application/vnd.github+json"
-          echo "Package linked to repo"
-          # Verify visibility
-          VISIBILITY=$(gh api "/users/${OWNER}/packages/container/${PACKAGE_NAME}" --jq '.visibility')
-          echo "Package visibility: ${VISIBILITY}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

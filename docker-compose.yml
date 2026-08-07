@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   m3u-xcapi-iptv:
-    image: ghcr.io/i0-ox/custom-m3u-xcapi-egp-iptv-stremio:latest
+    image: ghcr.io/i0-ox/custom-m3u-xcapi-epg-iptv-stremio:latest
     container_name: m3u-xcapi-iptv
     restart: unless-stopped
     expose:
