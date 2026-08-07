@@ -37,7 +37,7 @@ const helpers = `    collectMetaTitles(meta) {
     }
 
     getLanguagePriority(item) {
-        const priority = { FR: 0, MULTI: 1, EN: 2, OTHER: 3 };
+        const priority = { FR: 0, ES: 1, MULTI: 2, EN: 3, OTHER: 4 };
         return priority[this.getItemLanguage(item)] ?? 9;
     }
 

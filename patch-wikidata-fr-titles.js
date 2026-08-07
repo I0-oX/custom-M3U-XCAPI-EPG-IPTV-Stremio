@@ -7,21 +7,22 @@ let source = fs.readFileSync(addonPath, 'utf8');
 const methodMarker = `    async getCinemetaStreams(type, id) {`;
 if (!source.includes(methodMarker)) throw new Error('Cinemeta stream method marker not found');
 
-const helpers = `    async fetchFrenchLocalizedTitles(imdbId) {
+const helpers = `    async fetchLocalizedTitles(imdbId, lang) {
         const normalizedId = this.normalizeExternalId(imdbId);
         if (!/^tt\\d+$/i.test(normalizedId)) return [];
         if (!this.localizedTitleCache) this.localizedTitleCache = new Map();
-        if (this.localizedTitleCache.has(normalizedId)) {
-            return this.localizedTitleCache.get(normalizedId);
+        const cacheKey = normalizedId + ':' + lang;
+        if (this.localizedTitleCache.has(cacheKey)) {
+            return this.localizedTitleCache.get(cacheKey);
         }
 
         const promise = (async () => {
             const query = [
                 'SELECT DISTINCT ?label WHERE {',
                 '  ?item wdt:P345 "' + normalizedId + '" .',
-                '  { ?item rdfs:label ?label FILTER(LANG(?label) = "fr") }',
+                '  { ?item rdfs:label ?label FILTER(LANG(?label) = "' + lang + '") }',
                 '  UNION',
-                '  { ?item skos:altLabel ?label FILTER(LANG(?label) = "fr") }',
+                '  { ?item skos:altLabel ?label FILTER(LANG(?label) = "' + lang + '") }',
                 '}'
             ].join('\\n');
             const url = 'https://query.wikidata.org/sparql?format=json&query=' + encodeURIComponent(query);
@@ -47,28 +48,42 @@ const helpers = `    async fetchFrenchLocalizedTitles(imdbId) {
             }
         })();
 
-        this.localizedTitleCache.set(normalizedId, promise);
+        this.localizedTitleCache.set(cacheKey, promise);
         return promise;
+    }
+
+    async fetchFrenchLocalizedTitles(imdbId) {
+        return this.fetchLocalizedTitles(imdbId, 'fr');
+    }
+
+    async fetchSpanishLocalizedTitles(imdbId) {
+        return this.fetchLocalizedTitles(imdbId, 'es');
     }
 
 `;
 source = source.replace(methodMarker, helpers + methodMarker);
 
 const movieOld = `const matches = this.findTitleMatchesAny(this.movies, this.collectMetaTitles(meta), year, imdbId);`;
-const movieNew = `const localizedTitles = await this.fetchFrenchLocalizedTitles(imdbId);
-            const movieTitles = [...this.collectMetaTitles(meta), ...localizedTitles];
+const movieNew = `const [frenchTitles, spanishTitles] = await Promise.all([
+            this.fetchFrenchLocalizedTitles(imdbId),
+            this.fetchSpanishLocalizedTitles(imdbId)
+        ]);
+            const movieTitles = [...this.collectMetaTitles(meta), ...frenchTitles, ...spanishTitles];
             const matches = this.findTitleMatchesAny(this.movies, movieTitles, year, imdbId);`;
 if (!source.includes(movieOld)) throw new Error('movie localized title marker not found');
 source = source.replace(movieOld, movieNew);
 
 const seriesOld = `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId);`;
-const seriesNew = `const localizedTitles = await this.fetchFrenchLocalizedTitles(imdbId);
-            const seriesTitles = [...this.collectMetaTitles(meta), ...localizedTitles];
+const seriesNew = `const [frenchTitles, spanishTitles] = await Promise.all([
+            this.fetchFrenchLocalizedTitles(imdbId),
+            this.fetchSpanishLocalizedTitles(imdbId)
+        ]);
+            const seriesTitles = [...this.collectMetaTitles(meta), ...frenchTitles, ...spanishTitles];
             const matches = this.findTitleMatchesAny(this.series, seriesTitles, year, imdbId);`;
 if (!source.includes(seriesOld)) throw new Error('series localized title marker not found');
 source = source.replace(seriesOld, seriesNew);
 
-source = source.replace('version: "2.7.0",', 'version: "2.8.0",');
+source = source.replace('version: "2.7.0",', 'version: "2.9.0",');
 
 fs.writeFileSync(addonPath, source);
-console.log('[PATCH] French localized titles from Wikidata applied');
+console.log('[PATCH] French and Spanish localized titles from Wikidata applied');

@@ -14,7 +14,7 @@ source = source.replace(
   'const ADDON_ID = "org.stremio.m3u-epg-addon.cinemeta";'
 );
 source = source.replace('version: "2.0.0",', 'version: "2.4.0",');
-source = source.replace('const ADDON_NAME = "M3U/EPG TV Addon";', 'const ADDON_NAME = "Xtream Cinemeta FR MULTI EN";');
+source = source.replace('const ADDON_NAME = "M3U/EPG TV Addon";', 'const ADDON_NAME = "Xtream Cinemeta FR ES MULTI EN";');
 
 const marker = '    getStream(id) {';
 if (!source.includes(marker)) throw new Error('getStream marker not found');
@@ -24,16 +24,16 @@ const helpers = `    normalizeMediaTitle(value) {
             .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
             .toLowerCase()
             .replace(/\\(\\s*[a-z]{2,3}\\s*\\)\\s*$/g, ' ')
-            .replace(/\\[[^\\]]*(?:fr|french|multi|vostfr|vf|vo|en|english)[^\\]]*\\]/g, ' ')
-            .replace(/\\([^)]*(?:fr|french|multi|vostfr|vf|vo|en|english)[^)]*\\)/g, ' ')
-            .replace(/\\b(?:fr|french|multi|multilang|vostfr|vf|vo|en|english|truefrench)\\b/g, ' ')
+            .replace(/\\[[^\\]]*(?:fr|french|multi|vostfr|vf|vo|en|english|es|spanish)[^\\]]*\\]/g, ' ')
+            .replace(/\\([^)]*(?:fr|french|multi|vostfr|vf|vo|en|english|es|spanish)[^)]*\\)/g, ' ')
+            .replace(/\\b(?:fr|french|multi|multilang|vostfr|vf|vo|en|english|truefrench|es|spanish)\\b/g, ' ');
             .replace(/\\b(?:19|20)\\d{2}\\b/g, ' ')
             .replace(/[^a-z0-9]+/g, ' ')
             .trim();
     }
 
     titleTokens(value) {
-        const stopWords = new Set(['the', 'a', 'an', 'of', 'and', 'le', 'la', 'les', 'un', 'une', 'de', 'des', 'du', 'et']);
+        const stopWords = new Set(['the', 'a', 'an', 'of', 'and', 'le', 'la', 'les', 'un', 'une', 'de', 'des', 'du', 'et', 'lo', 'los', 'las', 'del', 'al', 'se', 'por', 'con', 'para', 'en', 'el', 'una']);
         return this.normalizeMediaTitle(value)
             .split(/\\s+/)
             .filter(Boolean)
@@ -54,6 +54,7 @@ const helpers = `    normalizeMediaTitle(value) {
         if (/\\b(?:MULTI|MULTILANG|MULTILINGUAL)\\b/.test(value)) return 'MULTI';
         if (/\\b(?:TRUEFRENCH|FRENCH|FRANCE|VOSTFR|VF|FR)\\b/.test(value)) return 'FR';
         if (/\\b(?:ENGLISH|ENG|EN)\\b/.test(value)) return 'EN';
+        if (/\\b(?:ESPAÑOL|SPANISH|SPA|ES)\\b/.test(value)) return 'ES';
         return 'OTHER';
     }
 
