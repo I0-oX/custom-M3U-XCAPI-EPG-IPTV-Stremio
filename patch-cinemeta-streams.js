@@ -26,7 +26,7 @@ const helpers = `    normalizeMediaTitle(value) {
             .replace(/\\(\\s*[a-z]{2,3}\\s*\\)\\s*$/g, ' ')
             .replace(/\\[[^\\]]*(?:fr|french|multi|vostfr|vf|vo|en|english|es|spanish)[^\\]]*\\]/g, ' ')
             .replace(/\\([^)]*(?:fr|french|multi|vostfr|vf|vo|en|english|es|spanish)[^)]*\\)/g, ' ')
-            .replace(/\\b(?:fr|french|multi|multilang|vostfr|vf|vo|en|english|truefrench|es|spanish)\\b/g, ' ');
+            .replace(/\\b(?:fr|french|multi|multilang|vostfr|vf|vo|en|english|truefrench|es|spanish)\\b/g, ' ')
             .replace(/\\b(?:19|20)\\d{2}\\b/g, ' ')
             .replace(/[^a-z0-9]+/g, ' ')
             .trim();

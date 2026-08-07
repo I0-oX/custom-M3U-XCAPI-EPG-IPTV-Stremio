@@ -8,9 +8,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install --production
 
-# Copy the rest of the code
 COPY . .
-
+RUN npm run patches
 # Expose the default port
 # Labels for OCI image metadata
 LABEL org.opencontainers.image.source=https://github.com/I0-oX/custom-M3U-XCAPI-EPG-IPTV-Stremio
