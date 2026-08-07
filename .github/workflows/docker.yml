@@ -56,7 +56,9 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
-          PACKAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          # For user packages, package name is just the repo name (no owner prefix)
+          PACKAGE_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2 | tr '[:upper:]' '[:lower:]')
+          echo "Package name: ${PACKAGE_NAME}"
           # Wait for package to be created
           for i in {1..10}; do
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
