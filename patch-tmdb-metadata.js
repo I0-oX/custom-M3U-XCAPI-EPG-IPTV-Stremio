@@ -32,6 +32,17 @@ const helpers = `    async fetchTmdbMeta(type, tmdbId) {
         }
     }
 
+    tmdbPrioritySort(matches) {
+        // TMDB results take priority over Cinemeta (IMDB) matches.
+        // Sort: TMDB source first, then by original language priority.
+        return matches.sort((a, b) => {
+            const aTmdb = a._source === 'TMDB' ? 0 : 1;
+            const bTmdb = b._source === 'TMDB' ? 0 : 1;
+            if (aTmdb !== bTmdb) return aTmdb - bTmdb;
+            return this.getLanguagePriority(b) - this.getLanguagePriority(a);
+        });
+    }
+
     async getTmdbStreams(type, id) {
         const parts = String(id || '').split(':');
         const tmdbId = parts[0].replace(/^tmdb:/, '');
@@ -44,8 +55,10 @@ const helpers = `    async fetchTmdbMeta(type, tmdbId) {
 
         if (type === 'movie') {
             const matches = await this.findTitleMatchesAny(this.movies, titles, year, meta.imdb_id || null);
+            // Tag matches as TMDB source for priority sorting
+            const tagged = matches.map(m => ({ ...m, _source: 'TMDB' }));
             const seen = new Set();
-            return matches
+            return this.tmdbPrioritySort(tagged)
                 .filter(match => match && match.url)
                 .filter(match => {
                     if (seen.has(match.url)) return false;
@@ -68,9 +81,10 @@ const helpers = `    async fetchTmdbMeta(type, tmdbId) {
 
         if (type === 'series') {
             const matches = await this.findTitleMatchesAny(this.series, titles, year, meta.imdb_id || null);
+            const tagged = matches.map(m => ({ ...m, _source: 'TMDB' }));
             const results = [];
             const seen = new Set();
-            for (const seriesItem of matches) {
+            for (const seriesItem of this.tmdbPrioritySort(tagged)) {
                 const seriesIdRaw = seriesItem.series_id || seriesItem.id.replace(/^iptv_series_/, '');
                 const info = await this.ensureSeriesInfo(seriesIdRaw);
                 const videos = info && Array.isArray(info.videos) ? info.videos : [];
@@ -120,4 +134,4 @@ source = source.replace(oldHandler, newHandler);
 source = source.replace('version: "2.9.0",', 'version: "2.10.0",');
 
 fs.writeFileSync(addonPath, source);
-console.log('[PATCH] TMDB metadata with Spanish language support applied');
+console.log('[PATCH] TMDB metadata with Spanish support + TMDB priority over Cinemeta applied');
