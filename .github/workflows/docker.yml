@@ -51,3 +51,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Make package public
+        if: github.event_name != 'pull_request'
+        run: |
+          PACKAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          gh api -X PATCH "/user/packages/container/${PACKAGE_NAME}" \
+            -f visibility=public \
+            --jq '.visibility'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
