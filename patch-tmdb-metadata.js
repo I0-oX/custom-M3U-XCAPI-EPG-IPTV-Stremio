@@ -33,13 +33,13 @@ const helpers = `    async fetchTmdbMeta(type, tmdbId) {
     }
 
     tmdbPrioritySort(matches) {
-        // TMDB results take priority over Cinemeta (IMDB) matches.
-        // Sort: TMDB source first, then by original language priority.
+        // TMDB results take priority over Cinemeta (IMDb) matches.
+        // Sort: TMDB source first, then Spanish/localized language priority.
         return matches.sort((a, b) => {
             const aTmdb = a._source === 'TMDB' ? 0 : 1;
             const bTmdb = b._source === 'TMDB' ? 0 : 1;
             if (aTmdb !== bTmdb) return aTmdb - bTmdb;
-            return this.getLanguagePriority(b) - this.getLanguagePriority(a);
+            return this.getLanguagePriority(a) - this.getLanguagePriority(b);
         });
     }
 
@@ -54,8 +54,13 @@ const helpers = `    async fetchTmdbMeta(type, tmdbId) {
         const year = meta.year;
 
         if (type === 'movie') {
-            const matches = await this.findTitleMatchesAny(this.movies, titles, year, meta.imdb_id || null);
-            // Tag matches as TMDB source for priority sorting
+            const matches = await this.findTitleMatchesAny(
+                this.movies,
+                titles,
+                year,
+                meta.imdb_id || null,
+                { titleFirst: true }
+            );
             const tagged = matches.map(m => ({ ...m, _source: 'TMDB' }));
             const seen = new Set();
             return this.tmdbPrioritySort(tagged)
@@ -80,7 +85,13 @@ const helpers = `    async fetchTmdbMeta(type, tmdbId) {
         }
 
         if (type === 'series') {
-            const matches = await this.findTitleMatchesAny(this.series, titles, year, meta.imdb_id || null);
+            const matches = await this.findTitleMatchesAny(
+                this.series,
+                titles,
+                year,
+                meta.imdb_id || null,
+                { titleFirst: true }
+            );
             const tagged = matches.map(m => ({ ...m, _source: 'TMDB' }));
             const results = [];
             const seen = new Set();

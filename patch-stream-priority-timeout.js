@@ -8,19 +8,22 @@ const oldSort = `.sort((a, b) => b.score - a.score)
             .map(entry => entry.item);`;
 const newSort = `.sort((a, b) => {
                 if (b.score !== a.score) return b.score - a.score;
-                const priority = { FR: 0, MULTI: 1, EN: 2, OTHER: 3 };
+                const priority = { ES: 0, OTHER: 1, MULTI: 2, FR: 3, EN: 4 };
                 return (priority[this.getItemLanguage(a.item)] ?? 9) - (priority[this.getItemLanguage(b.item)] ?? 9);
             })
             .map(entry => entry.item);`;
 if (source.includes(oldSort)) source = source.replace(oldSort, newSort);
 
+const spanishSeriesMatches = `const matches = await this.findSpanishTitleMatches(type, this.series, meta, year, imdbId);`;
 const localizedSeriesMatches = `const matches = this.findTitleMatchesAny(this.series, seriesTitles, year, imdbId);`;
 const legacySeriesMatches = `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId);`;
-if (source.includes(localizedSeriesMatches)) {
+if (source.includes(spanishSeriesMatches)) {
+    source = source.replace(spanishSeriesMatches, `const matches = (await this.findSpanishTitleMatches(type, this.series, meta, year, imdbId)).slice(0, 6);`);
+} else if (source.includes(localizedSeriesMatches)) {
     source = source.replace(localizedSeriesMatches, `const matches = this.findTitleMatchesAny(this.series, seriesTitles, year, imdbId).slice(0, 6);`);
 } else if (source.includes(legacySeriesMatches)) {
     source = source.replace(legacySeriesMatches, `const matches = this.findTitleMatchesAny(this.series, this.collectMetaTitles(meta), year, imdbId).slice(0, 6);`);
-} else if (!source.includes(`.slice(0, 6);`)) {
+} else if (!source.includes('.slice(0, 6);')) {
     throw new Error('series matches marker not found');
 }
 
@@ -35,10 +38,10 @@ const oldReturn = `            return results;
         }
 
         return [];`;
-const newReturn = `            const priority = { FR: 0, MULTI: 1, EN: 2, OTHER: 3 };
+const newReturn = `            const priority = { ES: 0, OTHER: 1, MULTI: 2, FR: 3, EN: 4 };
             return results.sort((a, b) => {
-                const langA = String(a.name || '').match(/·\\s*(FR|MULTI|EN|OTHER)/)?.[1] || 'OTHER';
-                const langB = String(b.name || '').match(/·\\s*(FR|MULTI|EN|OTHER)/)?.[1] || 'OTHER';
+                const langA = String(a.name || '').match(/·\\s*(ES|FR|MULTI|EN|OTHER)/)?.[1] || 'OTHER';
+                const langB = String(b.name || '').match(/·\\s*(ES|FR|MULTI|EN|OTHER)/)?.[1] || 'OTHER';
                 return (priority[langA] ?? 9) - (priority[langB] ?? 9);
             });
         }
@@ -47,4 +50,4 @@ const newReturn = `            const priority = { FR: 0, MULTI: 1, EN: 2, OTHER:
 if (source.includes(oldReturn)) source = source.replace(oldReturn, newReturn);
 
 fs.writeFileSync(addonPath, source);
-console.log('[PATCH] French stream priority and bounded series lookups applied');
+console.log('[PATCH] Spanish-first stream priority and bounded series lookups applied');
