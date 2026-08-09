@@ -106,19 +106,89 @@ const helpers = `
         this.localizedTitleCache.set(cacheKey, promise);
         return promise;
     }
+    async fetchTmdbFallbackTitles(type, meta, tmdbId) {
+        const normalizedId = String(tmdbId || '').match(/^\\d+$/)?.[0];
+        const titles = new Set();
+        const add = value => {
+            const title = String(value || '')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&amp;/gi, '&')
+                .replace(/&quot;/gi, '"')
+                .replace(/&#(?:39|x27);/gi, "'")
+                .replace(/&nbsp;/gi, ' ')
+                .replace(/\\s+/g, ' ')
+                .trim()
+                .replace(/\\s*(?:—|--)\\s*The Movie Database.*$/i, '')
+                .replace(/\\s*\\([^)]*\\)\\s*$/g, '')
+                .trim();
+            if (title) titles.add(title);
+        };
+
+        [
+            meta.original_name,
+            meta.original_title,
+            meta.name,
+            meta.title
+        ].forEach(add);
+
+        if (!normalizedId) return [...titles];
+        const endpoint = type === 'series' ? 'tv' : 'movie';
+        const apiKey = process.env.TMDB_API_KEY || this.config.tmdbApiKey;
+        try {
+            if (apiKey) {
+                const response = await fetch(
+                    'https://api.themoviedb.org/3/' + endpoint + '/' + normalizedId +
+                    '?api_key=' + encodeURIComponent(apiKey) + '&language=en-US',
+                    { timeout: 12000 }
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    add(data.original_title || data.original_name);
+                    add(data.title || data.name);
+                }
+            } else {
+                const response = await fetch(
+                    'https://www.themoviedb.org/' + endpoint + '/' + normalizedId + '?language=en-US',
+                    {
+                        timeout: 12000,
+                        headers: { 'User-Agent': 'Xtream-Stremio-Addon/2.10 title-matching' }
+                    }
+                );
+                if (response.ok) {
+                    const page = await response.text();
+                    add(page.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)?.[1]);
+                    add(page.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1]);
+                }
+            }
+        } catch {
+            // Metadata already supplied by Cinemeta remains usable.
+        }
+
+        return [...titles];
+    }
+
 
     async findSpanishTitleMatches(type, items, meta, year, imdbId) {
-        const tmdbTitles = await this.fetchTmdbSpanishTitles(
-            type,
-            meta.moviedb_id || meta.tmdb_id
-        );
-        return this.findTitleMatchesAny(
+        const tmdbId = meta.moviedb_id || meta.tmdb_id;
+        const tmdbTitles = await this.fetchTmdbSpanishTitles(type, tmdbId);
+        const spanishMatches = this.findTitleMatchesAny(
             items,
             tmdbTitles,
             year,
             imdbId,
             { spanishOnly: true, titleFirst: true }
         );
+        if (spanishMatches.length) return spanishMatches;
+
+        const spanishItems = (items || []).filter(item => this.getItemLanguage(item) === 'ES');
+        const fallbackTitles = await this.fetchTmdbFallbackTitles(type, meta, tmdbId);
+        const fallbackMatches = [];
+        for (const title of fallbackTitles) {
+            fallbackMatches.push(
+                ...this.findTitleMatchesAny(spanishItems, [title], year, null, { titleFirst: true })
+            );
+        }
+        return [...new Set(fallbackMatches)];
     }
 
 `;

@@ -50,16 +50,15 @@ const helpers = `    async fetchTmdbMeta(type, tmdbId) {
         const episode = parseInt(parts[2] || '0', 10);
         const meta = await this.fetchTmdbMeta(type, tmdbId);
         if (!meta) return [];
-        const titles = [meta.name, meta.original_name].filter(Boolean);
         const year = meta.year;
 
         if (type === 'movie') {
-            const matches = await this.findTitleMatchesAny(
+            const matches = await this.findSpanishTitleMatches(
+                type,
                 this.movies,
-                titles,
+                { ...meta, moviedb_id: meta.tmdbId },
                 year,
-                meta.imdb_id || null,
-                { titleFirst: true }
+                meta.imdb_id || null
             );
             const tagged = matches.map(m => ({ ...m, _source: 'TMDB' }));
             const seen = new Set();
@@ -85,12 +84,12 @@ const helpers = `    async fetchTmdbMeta(type, tmdbId) {
         }
 
         if (type === 'series') {
-            const matches = await this.findTitleMatchesAny(
+            const matches = await this.findSpanishTitleMatches(
+                type,
                 this.series,
-                titles,
+                { ...meta, moviedb_id: meta.tmdbId },
                 year,
-                meta.imdb_id || null,
-                { titleFirst: true }
+                meta.imdb_id || null
             );
             const tagged = matches.map(m => ({ ...m, _source: 'TMDB' }));
             const results = [];
