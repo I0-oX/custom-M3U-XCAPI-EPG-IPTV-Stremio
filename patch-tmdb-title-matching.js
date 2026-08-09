@@ -7,55 +7,7 @@ let source = fs.readFileSync(addonPath, 'utf8');
 const methodMarker = `    async getCinemetaStreams(type, id) {`;
 if (!source.includes(methodMarker)) throw new Error('Cinemeta stream method marker not found');
 
-const helpers = `    async fetchLocalizedTitles(imdbId, lang) {
-        const normalizedId = this.normalizeExternalId(imdbId);
-        if (!/^tt\\d+$/i.test(normalizedId)) return [];
-        if (!this.localizedTitleCache) this.localizedTitleCache = new Map();
-        const cacheKey = normalizedId + ':' + lang;
-        if (this.localizedTitleCache.has(cacheKey)) {
-            return this.localizedTitleCache.get(cacheKey);
-        }
-
-        const promise = (async () => {
-            const query = [
-                'SELECT DISTINCT ?label WHERE {',
-                '  ?item wdt:P345 "' + normalizedId + '" .',
-                '  { ?item rdfs:label ?label FILTER(LANG(?label) = "' + lang + '") }',
-                '  UNION',
-                '  { ?item skos:altLabel ?label FILTER(LANG(?label) = "' + lang + '") }',
-                '}'
-            ].join('\\n');
-            const url = 'https://query.wikidata.org/sparql?format=json&query=' + encodeURIComponent(query);
-            try {
-                const response = await fetch(url, {
-                    timeout: 6000,
-                    headers: {
-                        'Accept': 'application/sparql-results+json',
-                        'User-Agent': 'Xtream-Stremio-Addon/2.10 Spanish-title-matching'
-                    }
-                });
-                if (!response.ok) return [];
-                const payload = await response.json();
-                const rows = payload && payload.results && Array.isArray(payload.results.bindings)
-                    ? payload.results.bindings
-                    : [];
-                return [...new Set(rows
-                    .map(row => row && row.label && row.label.value)
-                    .filter(value => typeof value === 'string' && value.trim())
-                    .map(value => value.trim()))];
-            } catch {
-                return [];
-            }
-        })();
-
-        this.localizedTitleCache.set(cacheKey, promise);
-        return promise;
-    }
-
-    async fetchSpanishLocalizedTitles(imdbId) {
-        return this.fetchLocalizedTitles(imdbId, 'es');
-    }
-
+const helpers = `
     async fetchTmdbSpanishTitles(type, tmdbId) {
         const normalizedId = String(tmdbId || '').match(/^\\d+$/)?.[0];
         if (!normalizedId) return [];
@@ -126,8 +78,8 @@ const helpers = `    async fetchLocalizedTitles(imdbId, lang) {
                         headers: { 'User-Agent': 'Xtream-Stremio-Addon/2.10 Spanish-title-matching' }
                     }
                 );
-                if (!response.ok) return [];
-                const html = await response.text();
+                let html = '';
+                if (response.ok) html = await response.text();
                 const pattern = /<h2[^>]*>\\s*(?:Spanish; Castilian|Español; Castellano)\\s*<span[^>]*>\\(es-[^)]+\\)<\\/span>[\\s\\S]*?<td[^>]*>\\s*(?:Title|Título)\\s*<\\/td>[\\s\\S]*?<h3[^>]*>([\\s\\S]*?)<\\/h3>/gi;
                 const titles = expandTitles([...html.matchAll(pattern)].map(match => match[1]));
                 if (titles.length) return titles;
@@ -160,24 +112,13 @@ const helpers = `    async fetchLocalizedTitles(imdbId, lang) {
             type,
             meta.moviedb_id || meta.tmdb_id
         );
-        let matches = this.findTitleMatchesAny(
+        return this.findTitleMatchesAny(
             items,
             tmdbTitles,
             year,
             imdbId,
             { spanishOnly: true, titleFirst: true }
         );
-        if (matches.length) return matches;
-
-        const wikidataTitles = await this.fetchSpanishLocalizedTitles(imdbId);
-        matches = this.findTitleMatchesAny(
-            items,
-            [...tmdbTitles, ...wikidataTitles],
-            year,
-            imdbId,
-            { spanishOnly: true, titleFirst: true }
-        );
-        return matches;
     }
 
 `;
@@ -185,14 +126,14 @@ source = source.replace(methodMarker, helpers + methodMarker);
 
 const movieOld = `const matches = this.findTitleMatchesAny(this.movies, [meta.name], year, imdbId, { spanishOnly: true, titleFirst: true });`;
 const movieNew = `const matches = await this.findSpanishTitleMatches(type, this.movies, meta, year, imdbId);`;
-if (!source.includes(movieOld)) throw new Error('movie localized title marker not found');
+if (!source.includes(movieOld)) throw new Error('movie TMDB title marker not found');
 source = source.replace(movieOld, movieNew);
 
 const seriesOld = `const matches = this.findTitleMatchesAny(this.series, [meta.name], year, imdbId, { spanishOnly: true, titleFirst: true });`;
 const seriesNew = `const matches = await this.findSpanishTitleMatches(type, this.series, meta, year, imdbId);`;
-if (!source.includes(seriesOld)) throw new Error('series localized title marker not found');
+if (!source.includes(seriesOld)) throw new Error('series TMDB title marker not found');
 source = source.replace(seriesOld, seriesNew);
 source = source.replace('version: "2.7.0",', 'version: "2.9.0",');
 
 fs.writeFileSync(addonPath, source);
-console.log('[PATCH] TMDB Spanish titles first, with Wikidata/IMDb fallback applied');
+console.log('[PATCH] TMDB Spanish titles first, with IMDb fallback applied');

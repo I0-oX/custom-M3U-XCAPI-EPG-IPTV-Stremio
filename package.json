@@ -4,7 +4,7 @@
   "description": "Stremio addon for Xtream movies and series with Cinemeta IMDb matching",
   "main": "server.js",
   "scripts": {
-    "patches": "node patch-stremio-sdk.js && node patch-vod-manifest.js && node patch-xtream-external-ids.js && node patch-language-filter.js && node patch-cinemeta-streams.js && node patch-cinemeta-aliases.js && node patch-wikidata-fr-titles.js && node patch-tmdb-metadata.js && node patch-stream-quality.js && node patch-stream-priority-timeout.js && node patch-match-diagnostics.js && node patch-default-xtream.js",
+    "patches": "node patch-stremio-sdk.js && node patch-vod-manifest.js && node patch-xtream-external-ids.js && node patch-language-filter.js && node patch-cinemeta-streams.js && node patch-cinemeta-aliases.js && node patch-tmdb-title-matching.js && node patch-tmdb-metadata.js && node patch-stream-quality.js && node patch-stream-priority-timeout.js && node patch-match-diagnostics.js && node patch-default-xtream.js",
     "start": "node server.js",
     "dev": "npm run patches && nodemon server.js",
     "test": "node test.js"
