@@ -27,6 +27,7 @@ const helpers = `    normalizeMediaTitle(value) {
             .replace(/\\[[^\\]]*(?:fr|french|multi|vostfr|vf|vo|en|english|es|spanish)[^\\]]*\\]/g, ' ')
             .replace(/\\([^)]*(?:fr|french|multi|vostfr|vf|vo|en|english|es|spanish)[^)]*\\)/g, ' ')
             .replace(/\\b(?:fr|french|multi|multilang|vostfr|vf|vo|en|english|truefrench|es|spanish)\\b/g, ' ')
+            .replace(/\\b(?:2160p|1080p|720p|576p|480p|432p|4k|8k|uhd|fhd|hd|sd|web[- .]?dl|web[- .]?rip|bluray|blu-ray|brrip|dvdrip|hdtv|remux|x264|x265|h264|h265|hevc|av1|aac|ac3|eac3|ddp|dts|truehd|atmos|hdr(?:10)?\\+?|10bit|proper|repack|extended|unrated)\\b/g, ' ')
             .replace(/\\b(?:19|20)\\d{2}\\b/g, ' ')
             .replace(/[^a-z0-9]+/g, ' ')
             .trim();
